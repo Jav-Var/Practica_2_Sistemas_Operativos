@@ -1,0 +1,43 @@
+# ---- OS / Editor ----
+# macOS
+.DS_Store
+# Windows
+Thumbs.db
+# swap / temporary editor files
+*~
+*.swp
+*.swo
+
+# IDEs / editors
+.vscode/
+.idea/
+*.sublime-project
+*.sublime-workspace
+
+# ---- Build artifacts / binaries ----
+/build/
+/*.o
+*.o
+*.obj
+*.so
+*.a
+*.exe
+*.dll
+*.dSYM/
+
+# ---- Logs / coverage / runtime files ----
+*.log
+*.out
+*.pid
+
+# ---- Large data / generated indexes ----
+# Raw CSV data (very large) — keep out of Git
+
+#/data/dataset/*.csv (Mientras se use el dataset de prueba no se ignora este archivo)
+
+/data/index/*.dat
+/data/dataset/prueba.csv
+
+/src/prueba
+/src/prueba2
+/data/dataset/books_data.csv
