@@ -6,7 +6,7 @@
 
 /* arrays.h
  *
- * Functions for managing the title_arrays.dat and author_arrays.dat files
+ * Functions for managing the title_arrays.dat file
  * Each file contains a header followed by a sequence of nodes
  * Each node contains:
  * - key_len   : uint16  (2 bytes)   -> length of key (bytes)
@@ -22,7 +22,7 @@
 
 typedef struct {
     uint16_t key_len;         
-    char *key;           // key (string) of the node (title/author)
+    char *key;           // key (string) of the node (title)
     uint32_t list_len;   // number of offsets
     off_t *offsets;   // array of length list_len
     off_t next_ptr;   // next pointer to manage collisions (hash table implemented by chaining)

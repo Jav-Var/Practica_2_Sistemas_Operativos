@@ -5,7 +5,7 @@
 #include "common.h"
 
 /* buckets.h
- * Functions for managing the title_buckets.dat and author_buckets.dat files
+ * Functions for managing the title_buckets.dat file
  * Each buckets file contains a header followed by a contiguous table of bucket entries.
  *
  * File layout:

@@ -12,9 +12,11 @@
 #define INDEX_MAGIC "IDX1" 
 #define INDEX_VERSION 1 
 
-#define CSV_PATH "data/dataset/books_data.csv"
+#define CSV_PATH "data/dataset/books_data_test.csv"
 #define INDEX_DIR "data/index"
 #define NUM_DATASET_FIELDS 14
+#define NUM_BUCKETS 4096
+#define DEFAULT_HASH_SEED 0x12345678abcdefULL
 
 #define KEY_PREFIX_LEN 14 // lenght for a matching search 
 

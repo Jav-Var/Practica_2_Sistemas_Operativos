@@ -9,7 +9,7 @@
 #include <sys/stat.h>
 
 /* Header layout:
-   offset 0: magic 4 bytes //
+   offset 0: magic 4 bytes // Borrar por simplicidad
    offset 4: version uint16 //
    offset 6: reserved uint16 //
    offset 8: page_size uint32
@@ -29,23 +29,7 @@ int buckets_create(const char *path, uint64_t num_buckets, uint64_t hash_seed) {
 
     unsigned char header[BUCKETS_HEADER_SIZE];
     memset(header, 0, sizeof(header));
-    memcpy(header + 0, INDEX_MAGIC, 4);
 
-    uint16_t v16;
-    uint32_t v32;
-    uint64_t v64;
-    v16 = (uint16_t)INDEX_VERSION;
-    memcpy(header + 4, &v16, sizeof(v16));
-    v16 = 0;
-    memcpy(header + 6, &v16, sizeof(v16));
-    v32 = (uint32_t)BUCKETS_HEADER_SIZE;
-    memcpy(header + 8, &v32, sizeof(v32));
-    v64 = (uint64_t)num_buckets;
-    memcpy(header + 12, &v64, sizeof(v64));
-    v64 = (uint64_t)hash_seed;
-    memcpy(header + 20, &v64, sizeof(v64));
-    v32 = (uint32_t)BUCKET_ENTRY_SIZE;
-    memcpy(header + 28, &v32, sizeof(v32));
 
     if (safe_pwrite(fd, header, BUCKETS_HEADER_SIZE, 0) != (ssize_t)BUCKETS_HEADER_SIZE) {
         close(fd);
@@ -87,10 +71,6 @@ int buckets_open_readwrite(const char *path, uint64_t *num_buckets_out, uint64_t
     if (fd < 0) return -1;
     unsigned char header[BUCKETS_HEADER_SIZE];
     if (safe_pread(fd, header, BUCKETS_HEADER_SIZE, 0) != (ssize_t)BUCKETS_HEADER_SIZE) {
-        close(fd);
-        return -1;
-    }
-    if (memcmp(header + 0, INDEX_MAGIC, 4) != 0) {
         close(fd);
         return -1;
     }

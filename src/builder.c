@@ -15,6 +15,7 @@
 /* Extract CSV field by index (0-based), support quoted fields with double quotes.
    The returned pointer is malloc'd and must be freed (or ownership transferred).
 */
+
 static char *csv_get_field_copy(const char *line, int field_idx) {
     const char *p = line;
     int idx = 0;
@@ -76,7 +77,7 @@ static char *csv_get_field_copy(const char *line, int field_idx) {
 }
 
 /* field index: title = 0, author_name = 1 */
-static int get_field_index_for(const char *index_name) {
+static int get_field_index_for(const char *index_name) { // Esto que hace?
     if (strcmp(index_name, "title") == 0) return 0;
     if (strcmp(index_name, "author") == 0 || strcmp(index_name, "author_name") == 0) return 1;
     return -1;
@@ -103,7 +104,6 @@ int build_index_stream(const char *csv_path, const char *out_dir, const char *in
         fprintf(stderr, "Failed to create arrays file %s\n", arrays_path);
         return -1;
     }
-
     int bfd = buckets_open_readwrite(buckets_path, NULL, NULL);
     if (bfd < 0) { fprintf(stderr,"open buckets failed\n"); return -1; }
     int afd = arrays_open(arrays_path);
@@ -186,10 +186,6 @@ int build_both_indices_stream(const char *csv_path, const char *out_dir, uint64_
     /* We will do two passes (one per index) to keep code simple */
     if (build_index_stream(csv_path, out_dir, "title", num_buckets_title, hash_seed) != 0) {
         perror("build title index");
-        return -1;
-    }
-    if (build_index_stream(csv_path, out_dir, "author", num_buckets_author, hash_seed) != 0) {
-        perror("build author index");   
         return -1;
     }
     return 0;
