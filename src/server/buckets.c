@@ -45,14 +45,17 @@ off_t buckets_entry_offset(uint64_t bucket_id) { // To do: Revisar si es factibl
 }
 
 // Lee el archivo de buckets en un bucket_id
-off_t buckets_read_head(int fd, uint64_t num_buckets, uint64_t bucket_id) {
+off_t buckets_read_head(int fd, uint64_t bucket_id) {
     if (bucket_id >= NUM_BUCKETS) {
         fprintf(stderr, "Se intento acceder a un bucket fuera del rango del archivo\n");
-        return 1;
+        return 0;
     }
     off_t pos = buckets_entry_offset(bucket_id); // To do: Revisar si se puede implementar la funcion aqui mismo (Una sola linea)
     unsigned char buf[8]; // To do: Revisar si esto debe ser 'char'
-    if (safe_pread(fd, buf, 8, pos) != 8) return 0;
+    if (safe_pread(fd, buf, 8, pos) != 8) {
+        fprintf(stderr, "Error, no se pudo leer el offset del nodo\n");
+        return 0;
+    }
     off_t bucket_offset;
     memcpy(&bucket_offset, buf, sizeof(bucket_offset));
     return bucket_offset;

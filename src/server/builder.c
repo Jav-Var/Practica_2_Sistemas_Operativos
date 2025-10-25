@@ -118,27 +118,31 @@ int build_index_stream(const char *csv_path, const char *out_dir) {
         if (normalized_title == NULL) continue;
 
         // Hash 
-        uint64_t h = hash_key_prefix(normalized_title, strlen(normalized_title), NUM_BUCKETS);
+        uint64_t h = hash_key_prefix(normalized_title, strlen(normalized_title), DEFAULT_HASH_SEED);
         uint64_t mask = NUM_BUCKETS - 1;
         uint64_t bucket = bucket_id_from_hash(h, mask);
-        printf("llegue hasta aqui\n");
 
         // Obtiene la cabeza de la lista enlazada
-        off_t old_head = buckets_read_head(bfd, NUM_BUCKETS, bucket);
+        off_t old_head = buckets_read_head(bfd, bucket);
 
         // Inserta los datos del nodo en el archivo
         arrays_node_t node;
         node.key_len = (uint16_t)strlen(normalized_title);
-        node.key = strdup(normalized_title); 
+        node.key = strdup(normalized_title);
+        node.entry_offset = start_offset;
+        node.next_ptr = old_head;      
         off_t new_node_off = arrays_append_node(afd, &node);
+        printf("Datos del nodo leidos\n");
+
+
         if (new_node_off == 0) {
-            fprintf(stderr, "Error al insertar nodo %s\n", title);
+            fprintf(stderr, "Error al insertar nodo\n");
             arrays_free_node(&node);
+            free(title); 
             continue;
         }
+        
         free(title); 
-        free(normalized_title);
-
         arrays_free_node(&node);
 
         if (buckets_write_head(bfd, NUM_BUCKETS, bucket, new_node_off) != 0) {

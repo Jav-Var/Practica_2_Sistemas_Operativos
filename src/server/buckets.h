@@ -11,7 +11,7 @@ int buckets_create(const char *path);
 int buckets_open_readwrite(const char *path);
 
 /* Read head offset for bucket_id (0..num_buckets-1) */
-off_t buckets_read_head(int fd, uint64_t num_buckets, uint64_t bucket_id);
+off_t buckets_read_head(int fd, uint64_t bucket_id);
 
 /* Write head offset for bucket_id */
 int buckets_write_head(int fd, uint64_t num_buckets, uint64_t bucket_id, off_t head);

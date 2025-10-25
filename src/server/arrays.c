@@ -19,6 +19,12 @@ int arrays_create(const char *path) {
         printf("open %s fallo al crear archivo de nodos %s\n", path, strerror(errno));
         return -1;
     }
+    // Escribir un byte nulo al inicio para poder representar NULL como el offset 0 en la lista enlazada
+    char null_byte = 0;
+    if (write(fd, &null_byte, 1) != 1) {
+        close(fd);
+        return -1;
+    }
     fsync(fd);
     close(fd);
     return 0;
@@ -36,14 +42,18 @@ size_t arrays_calc_node_size(uint16_t key_len) {
     return sizeof(uint16_t) + (size_t)key_len + sizeof(off_t) + sizeof(off_t);
 }
 
-// Añade un nodo al archivo, retorna el offset del nodo retorna offset -1 si hay error
+// Añade un nodo al archivo, retorna el offset del nodo retorna offset 0 si hay error
 off_t arrays_append_node(int fd, const arrays_node_t *node) {
-    if (!node || !node->key) return -1; // Cambiar a una macro (como NULL_NODE)
+    if (node == NULL || node->key == NULL) {
+        fprintf(stderr, "Error: el nodo a insertar tiene una llave nula\n");
+        return 0; 
+    } 
     uint16_t key_len = node -> key_len; // Cantidad de caracteres de la key (titulo)
     size_t node_size = arrays_calc_node_size(key_len);
     unsigned char *buf = malloc(node_size); 
     if (buf == NULL) {
-        return -1;
+        fprintf(stderr, "Error de malloc\n");
+        return 0;
     }
     size_t pos = 0; 
 
@@ -53,16 +63,20 @@ off_t arrays_append_node(int fd, const arrays_node_t *node) {
     memcpy(buf + pos, node->key, key_len); // Escribe la key (titulo)
     pos += key_len;
 
-    memcpy(buf + pos, node->entry_offset, sizeof(node->entry_offset));
+    memcpy(buf + pos, &node->entry_offset, sizeof(node->entry_offset));
     pos += sizeof(node->entry_offset);
 
     memcpy(buf + pos, &node->next_ptr, sizeof node->next_ptr);
-    pos += sizeof(uint64_t);
+    pos += sizeof(off_t);
 
     off_t new_node_off = lseek(fd, 0, SEEK_END); // Devuelve el offset del final del archivo
-    if (new_node_off == (off_t)-1) {
-        free(buf);
-        return 0;
+    if (new_node_off == (off_t)0) { // No insertar al inicio del archivo, el primer byte esta reservado para representar NULL
+        char null_byte = 0;
+        if (write(fd, &null_byte, 1) != 1) {
+            free(buf);
+            return 0;
+        }
+        new_node_off = 1;  // Primer nodo va en offset 1
     }
     if (safe_pwrite(fd, buf, node_size, new_node_off) != (ssize_t)node_size) {
         free(buf);

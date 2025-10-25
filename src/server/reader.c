@@ -37,7 +37,7 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
     *out_offsets = NULL;
     *out_count = 0;
 
-    printf("index_lookup: %s\n", key);
+    printf("Buscando: %s\n", key);
 
     // Halla el bucket a partir del hash
     uint64_t hval = hash_key_prefix(key, strlen(key), DEFAULT_HASH_SEED);
@@ -45,9 +45,10 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
     uint64_t bucket = bucket_id_from_hash(hval, mask);
 
     // Obtiene el offset de la cabeza de la lista enlazada
-    off_t head = buckets_read_head(h->buckets_fd, NUM_BUCKETS, bucket); 
+    off_t head = buckets_read_head(h->buckets_fd, bucket); 
     
     if (head == 0) { // offset 0 representa null
+        fprintf(stderr, "Error: No se pudo leer el bucket\n");
         return 0;
     }
 
@@ -64,10 +65,12 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
     while (cur != 0) { // Recorre la lista enlazada
         arrays_node_t node = {.key_len = 0, .key = NULL, .entry_offset = 0, .next_ptr = 0};
         if (arrays_read_node_full(h->arrays_fd, cur, &node) != 0) { // Lee los datos del nodo
+            fprintf(stderr, "Error, no se pudo leer los datos del nodo\n");
             break;
         }
 
         off_t next = node.next_ptr; 
+        printf("Leyendo nodo con key %s\n", node.key); //.
 
         if (node.key) { 
             printf("Read: %s\n", node.key); //
@@ -93,6 +96,7 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
         cur = next;
     }
 
+    free(normalized_key);
     if (cnt == 0) {
         free(results);
         *out_offsets = NULL;

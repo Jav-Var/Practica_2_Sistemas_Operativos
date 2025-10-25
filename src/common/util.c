@@ -23,7 +23,7 @@ int normalized_strcmp(const char *a, const char *b) {
 }
 
 char *normalize_string(const char *s) {
-    if (!s) {
+    if (s == NULL) {
         char *empty = malloc(1);
         if (empty) empty[0] = '\0';
         return empty;
