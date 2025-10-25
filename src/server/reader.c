@@ -73,7 +73,6 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
         if (node.key) { 
             printf("Read: %s\n", node.key); //
             if (strcmp(node.key, normalized_key) == 0) { // nota: node.key ya es una llave normalizada
-                free(normalized_key);
                 if (cnt >= cap) { // Si se excede el tamaño del array dinamico, realocar con doble de tamaño
                     uint32_t new_cap = cap * 2;
                     off_t *tmp = realloc(results, sizeof(off_t) * new_cap); // Copia del array con doble de tamaño

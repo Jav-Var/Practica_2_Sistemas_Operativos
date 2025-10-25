@@ -35,5 +35,4 @@ Thumbs.db
 
 #(Mientras se use el dataset de prueba no se ignora este archivo)
 /data/dataset/books_data.csv
-/data/index/title_arrays.data
-/data/index/title_buckets.dat
+/data/index/
