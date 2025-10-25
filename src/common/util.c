@@ -4,19 +4,6 @@
 #include <string.h>
 #include <ctype.h>
 
-uint64_t next_pow2(uint64_t v) {
-    if (v == 0) return 1;
-    v--;
-    v |= v >> 1;
-    v |= v >> 2;
-    v |= v >> 4;
-    v |= v >> 8;
-    v |= v >> 16;
-    v |= v >> 32;
-    v++;
-    return v;
-}
-
 /* normalized_strcmp: compares normalized versions of a and b.
  * returns same semantics as strcmp.
  * handles NULL pointers (treat as empty).

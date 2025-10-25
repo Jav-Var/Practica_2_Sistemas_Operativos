@@ -77,7 +77,7 @@ int main() {
     snprintf(title_buckets, sizeof(title_buckets), "%s/title_buckets.dat", index_dir);
     snprintf(title_arrays, sizeof(title_arrays), "%s/title_arrays.dat", index_dir);
 
-    /* CONSTRUYE EL FIFO */
+    /* CONSTRUYE EL INDICE */
     int need_build = 0;
     if (access(title_buckets, F_OK) != 0) {
         printf("Falta archivo de índice: %s\n", title_buckets);
@@ -85,10 +85,10 @@ int main() {
     }
 
     if (need_build) {
-        uint64_t num_buckets_title = next_pow2(4096); // Revisar si es necesario usar pow2
+        uint64_t num_buckets_title = NUM_BUCKETS; 
         uint64_t hash_seed = DEFAULT_HASH_SEED;
         printf("Construyendo índices en '%s'...\n", INDEX_DIR);
-        if (build_index_stream(CSV_PATH, INDEX_DIR, "title", num_buckets_title, hash_seed) != 0) {
+        if (build_index_stream(CSV_PATH, INDEX_DIR) != 0) {
             fprintf(stderr, "Fallo al construir los índices\n");
             return 1;
         }
