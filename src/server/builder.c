@@ -115,6 +115,7 @@ int build_index_stream(const char *csv_path) {
         printf("Añadiendo %s a la tabla hash\n", title);
 
         char *normalized_title = normalize_string(title); // Obtiene el titulo normalizado (Solo alfanumericos)
+        free(title);
         if (normalized_title == NULL) continue;
 
         // Hash 
@@ -132,19 +133,17 @@ int build_index_stream(const char *csv_path) {
         node.entry_offset = start_offset;
         node.next_ptr = old_head;      
         off_t new_node_off = arrays_append_node(afd, &node);
+        free(normalized_title);
         printf("Datos del nodo leidos\n");
-
 
         if (new_node_off == 0) {
             fprintf(stderr, "Error al insertar nodo\n");
             arrays_free_node(&node);
-            free(title); 
             continue;
         }
         
-        free(title); 
         arrays_free_node(&node);
-
+        
         if (buckets_write_head(bfd, bucket, new_node_off) != 0) {
             fprintf(stderr, "failed write bucket head\n");
         }
