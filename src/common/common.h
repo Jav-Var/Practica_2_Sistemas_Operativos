@@ -15,11 +15,11 @@
 #define CSV_PATH "data/dataset/books_data_test.csv"
 #define INDEX_DIR "data/index"
 #define NUM_DATASET_FIELDS 14
-#define NUM_BUCKETS 4096 // Debe ser potencia de dos
+#define NUM_BUCKETS 1048576 // Debe ser potencia de dos
 #define TITLE_FIELD 0
 #define DEFAULT_HASH_SEED 0x12345678abcdefULL
 
-#define KEY_PREFIX_LEN 14 // lenght for a matching search 
+#define KEY_PREFIX_LEN 32 // lenght for a matching search 
 
 /* safe IO wrappers */
 ssize_t safe_pread(int fd, void *buf, size_t count, off_t offset);
