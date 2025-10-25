@@ -8,12 +8,12 @@
 #include <sys/stat.h>
 #include <errno.h>
 
-// Crea el archivo de nodos
+// Crea el archivo de nodos (Reserva el primer byte para representar null)
 int arrays_create(const char *path) {
     int fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
-    /* O_CREAT: creates the file if it doesn't exist.
-     * O_TRUNC: if it exists, it truncates it to length 0 (deletes its content).
-     * O_RDWR: opens it in read/write mode (necessary for pread/pwrite).
+    /* O_CREAT: Crea el archivo si no existe
+     * O_TRUNC: Si existe el archivo, elimina sus contenidos
+     * O_RDWR:  Abre en modo read/write (necesario para pread/pwrite).
      */
     if (fd < 0) {
         printf("open %s fallo al crear archivo de nodos %s\n", path, strerror(errno));

@@ -41,8 +41,8 @@ static char *csv_get_field_copy(const char *line, int field_idx) {
 }
 
 /* Construye los archivos de indices */
-int build_index_stream(const char *csv_path, const char *out_dir) {
-    char buckets_path[1024] = "data/index/title_buckets.dat"; // Revisar si se puede hacer con tamaño dinamico y revisar si es mejor
+int build_index_stream(const char *csv_path) {
+    char buckets_path[1024] = "data/index/title_buckets.dat";
     char arrays_path[1024] = "data/index/title_arrays.dat";
 
     // Verificar si se puede eliminar buckets_create y simplemente implementar aqui
@@ -145,7 +145,7 @@ int build_index_stream(const char *csv_path, const char *out_dir) {
         free(title); 
         arrays_free_node(&node);
 
-        if (buckets_write_head(bfd, NUM_BUCKETS, bucket, new_node_off) != 0) {
+        if (buckets_write_head(bfd, bucket, new_node_off) != 0) {
             fprintf(stderr, "failed write bucket head\n");
         }
     }

@@ -26,8 +26,6 @@ void index_close(index_handle_t *h) {
     close(h->arrays_fd);
     h->buckets_fd = -1;
     h -> arrays_fd = -1;
-    h->num_buckets = 0;
-    h->hash_seed = 0;
 }
 
 int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32_t *out_count) {

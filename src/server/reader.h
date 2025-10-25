@@ -3,11 +3,10 @@
 
 #include "common.h"
 
+// index_handle_t
 typedef struct {
     int buckets_fd;
     int arrays_fd;
-    uint64_t num_buckets;
-    uint64_t hash_seed;
 } index_handle_t;
 
 /* Open an index given paths to buckets and arrays files */

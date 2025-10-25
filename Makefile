@@ -1,6 +1,6 @@
 # Makefile - build common objects and two programs: index_server and ui_client
 CC ?= gcc
-CFLAGS ?= -std=c11 -O2 -g -Wall -Wextra -I./src -I./src/common -I./src/client -I./src/server
+CFLAGS ?= -std=c11 -O2 -D_POSIX_C_SOURCE=200112L -g -Wall -Wextra -I./src -I./src/common -I./src/client -I./src/server
 LDFLAGS ?=
 
 SRCDIR := src

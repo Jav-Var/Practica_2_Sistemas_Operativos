@@ -85,10 +85,8 @@ int main() {
     }
 
     if (need_build) {
-        uint64_t num_buckets_title = NUM_BUCKETS; 
-        uint64_t hash_seed = DEFAULT_HASH_SEED;
         printf("Construyendo índices en '%s'...\n", INDEX_DIR);
-        if (build_index_stream(CSV_PATH, INDEX_DIR) != 0) {
+        if (build_index_stream(CSV_PATH) != 0) {
             fprintf(stderr, "Fallo al construir los índices\n");
             return 1;
         }

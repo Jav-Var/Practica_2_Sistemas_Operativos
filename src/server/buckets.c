@@ -7,7 +7,6 @@
 #include <string.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <fcntl.h>
 
 // Crea el archivo de buckets
 int buckets_create(const char *path) {
@@ -62,7 +61,7 @@ off_t buckets_read_head(int fd, uint64_t bucket_id) {
 }
 
 // Escribe 'head' en el bucket_id dado
-int buckets_write_head(int fd, uint64_t num_buckets, uint64_t bucket_id, off_t head) {
+int buckets_write_head(int fd, uint64_t bucket_id, off_t head) {
     if (bucket_id >= NUM_BUCKETS) {
         fprintf(stderr, "Se intento acceder a un bucket fuera del rango del archivo\n");
         return 1;

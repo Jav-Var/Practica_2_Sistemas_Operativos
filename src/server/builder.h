@@ -5,6 +5,6 @@
 
 /* Functions for building the two index files from dataset CSV */
 
-int build_index_stream(const char *csv_path, const char *out_dir);
+int build_index_stream(const char *csv_path);
 
 #endif // BUILDER_H
