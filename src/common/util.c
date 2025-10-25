@@ -36,7 +36,7 @@ char *normalize_string(const char *s) {
     size_t i = 0;
     size_t out_idx = 0;
     
-    while (s[i] != '\0' && i <= KEY_PREFIX_LEN) {
+    while (s[i] != '\0' ) {
         unsigned char c1 = s[i];
 
         // Manejo de caracteres ASCII de 1 byte (los más comunes)

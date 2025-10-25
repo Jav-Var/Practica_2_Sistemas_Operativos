@@ -19,7 +19,7 @@
 #define TITLE_FIELD 0
 #define DEFAULT_HASH_SEED 0x12345678abcdefULL
 
-#define KEY_PREFIX_LEN 32 // lenght for a matching search 
+#define KEY_PREFIX_LEN 20 // lenght for a matching search 
 
 /* safe IO wrappers */
 ssize_t safe_pread(int fd, void *buf, size_t count, off_t offset);
