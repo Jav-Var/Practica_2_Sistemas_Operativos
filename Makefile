@@ -1,29 +1,58 @@
 # Makefile - build common objects and two programs: index_server and ui_client
+# This version explicitly defines dependencies for client and server.
 CC ?= gcc
 CFLAGS ?= -std=c11 -O2 -D_POSIX_C_SOURCE=200112L -g -Wall -Wextra -I./src -I./src/common -I./src/client -I./src/server
 LDFLAGS ?=
+# LDFLAGS ?= -lnsl # Descomenta si tienes errores de 'undefined reference' a funciones de red
 
 SRCDIR := src
 BUILD_DIR := build
 OBJDIR := $(BUILD_DIR)/obj
 
-# Main sources for programs (override on the make command line if needed)
-# e.g. make SERVER_MAIN=src/server/some_other_server.c UI_MAIN=src/client/some_client.c
-SERVER_MAIN ?= $(SRCDIR)/server/index_server.c
-UI_MAIN     ?= $(SRCDIR)/client/ui_client.c
+# --- 1. Define Source Files Explicitly ---
 
-# discover all .c files under src (recursive)
-ALL_SRCS := $(shell find $(SRCDIR) -type f -name '*.c' | sort)
+# COMMON: Código compartido por AMBOS
+COMMON_SRCS := $(SRCDIR)/common/common.c \
+               $(SRCDIR)/common/util.c
 
-# common sources = all sources minus the two mains
-COMMON_SRCS := $(filter-out $(SERVER_MAIN) $(UI_MAIN), $(ALL_SRCS))
+# SERVER: Código que solo usa el servidor
+SERVER_CORE_SRCS := $(SRCDIR)/server/reader.c \
+                    $(SRCDIR)/server/builder.c \
+                    $(SRCDIR)/server/hash.c \
+                    $(SRCDIR)/server/buckets.c \
+                    $(SRCDIR)/server/arrays.c
 
-# map src/.../*.c -> build/obj/.../*.o
+# CLIENT: Código que solo usa el cliente
+CLIENT_CORE_SRCS := $(SRCDIR)/client/ui.c
+
+# MAINS: Los puntos de entrada de cada programa
+SERVER_MAIN_SRC := $(SRCDIR)/server/index_server.c
+CLIENT_MAIN_SRC := $(SRCDIR)/client/ui_client.c
+
+# --- 2. Map Sources to Object Files ---
+# (patsubst) convierte 'src/common/common.c' -> 'build/obj/common/common.o'
+
 COMMON_OBJS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(COMMON_SRCS))
+SERVER_CORE_OBJS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SERVER_CORE_SRCS))
+CLIENT_CORE_OBJS := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(CLIENT_CORE_SRCS))
 
-# final executables
+SERVER_MAIN_OBJ := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(SERVER_MAIN_SRC))
+CLIENT_MAIN_OBJ := $(patsubst $(SRCDIR)/%.c,$(OBJDIR)/%.o,$(CLIENT_MAIN_SRC))
+
+# --- 3. Define Full Object Lists for Linking ---
+
+# El servidor necesita: common + server_core + server_main
+SERVER_OBJS_LIST := $(COMMON_OBJS) $(SERVER_CORE_OBJS) $(SERVER_MAIN_OBJ)
+
+# El cliente necesita: common + client_core + client_main
+CLIENT_OBJS_LIST := $(COMMON_OBJS) $(CLIENT_CORE_OBJS) $(CLIENT_MAIN_OBJ)
+
+# --- 4. Define Executable Paths ---
+
 SERVER_EXE := $(BUILD_DIR)/index_server
 UI_EXE     := $(BUILD_DIR)/ui_client
+
+# --- 5. Build Rules ---
 
 .PHONY: all clean rebuild dirs show
 
@@ -31,25 +60,28 @@ all: dirs $(SERVER_EXE) $(UI_EXE)
 
 dirs:
 	@mkdir -p $(BUILD_DIR)
-	@mkdir -p $(OBJDIR)
+	@mkdir -p $(OBJDIR)/common
+	@mkdir -p $(OBJDIR)/server
+	@mkdir -p $(OBJDIR)/client
 
-# compile common sources -> objects
-# note: we create the parent directory for each object as needed
+# Regla GENÉRICA para compilar CUALQUIER .c a su .o correspondiente
+# Crea el subdirectorio del objeto (ej. build/obj/server) si no existe
 $(OBJDIR)/%.o: $(SRCDIR)/%.c | dirs
 	@echo "CC -> $<"
 	@mkdir -p $(dir $@)
 	@$(CC) $(CFLAGS) -c $< -o $@
 
-# link server: SERVER_MAIN + common objects
-# we pass the .c SERVER_MAIN directly to the compiler (it will be compiled+linked)
-$(SERVER_EXE): $(COMMON_OBJS) $(SERVER_MAIN) | dirs
-	@echo "LINK -> $(SERVER_EXE)"
-	@$(CC) $(CFLAGS) $(COMMON_OBJS) $(SERVER_MAIN) $(LDFLAGS) -o $(SERVER_EXE)
+# Regla de ENLACE (link) para el SERVIDOR
+# Depende de su lista específica de objetos
+$(SERVER_EXE): $(SERVER_OBJS_LIST)
+	@echo "LINK -> $@"
+	@$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
-# link ui client: UI_MAIN + common objects
-$(UI_EXE): $(COMMON_OBJS) $(UI_MAIN) | dirs
-	@echo "LINK -> $(UI_EXE)"
-	@$(CC) $(CFLAGS) $(COMMON_OBJS) $(UI_MAIN) $(LDFLAGS) -o $(UI_EXE)
+# Regla de ENLACE (link) para el CLIENTE
+# Depende de su lista específica de objetos
+$(UI_EXE): $(CLIENT_OBJS_LIST)
+	@echo "LINK -> $@"
+	@$(CC) $(CFLAGS) $^ $(LDFLAGS) -o $@
 
 clean:
 	@echo "Cleaning $(BUILD_DIR)"
@@ -58,15 +90,9 @@ clean:
 rebuild: clean all
 
 show:
-	@echo "CC = $(CC)"
-	@echo "CFLAGS = $(CFLAGS)"
-	@echo "SERVER_MAIN = $(SERVER_MAIN)"
-	@echo "UI_MAIN = $(UI_MAIN)"
-	@echo "ALL_SRCS ="
-	@echo "$(ALL_SRCS)"
-	@echo "COMMON_SRCS ="
-	@echo "$(COMMON_SRCS)"
-	@echo "COMMON_OBJS ="
-	@echo "$(COMMON_OBJS)"
-	@echo "SERVER_EXE = $(SERVER_EXE)"
-	@echo "UI_EXE = $(UI_EXE)"
+	@echo "--- Build Configuration ---"
+	@echo "SERVER EXE: $(SERVER_EXE)"
+	@echo "SERVER OBJS: $(SERVER_OBJS_LIST)"
+	@echo
+	@echo "CLIENT EXE: $(UI_EXE)"
+	@echo "CLIENT OBJS: $(CLIENT_OBJS_LIST)"

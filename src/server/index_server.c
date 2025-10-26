@@ -1,190 +1,214 @@
 #define _GNU_SOURCE
-#include "util.h"
-#include "reader.h"
-#include "builder.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
-#include <fcntl.h>
-#include <sys/stat.h>
-#include <errno.h>
+#include <sys/socket.h>
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include "reader.h" // Nuestro motor de búsqueda
+#include "common.h" // Para las rutas y safe_pread/pwrite
 
-#define REQ_FIFO "/tmp/index_req.fifo"
-#define RSP_FIFO "/tmp/index_rsp.fifo"
-#define BUF_SZ 8192
+#define SERVER_PORT 8080
+#define LISTEN_BACKLOG 10
 
-/* ensure pipe exists */
-static int ensure_fifo(const char *path) {
-    struct stat st;
-    if (stat(path, &st) == 0) {
-        if (!S_ISFIFO(st.st_mode)) {
-            fprintf(stderr, "La ruta existe y no es un FIFO: %s\n", path);
-            return -1;
-        }
-        return 0;
-    }
-    if (mkfifo(path, 0666) != 0) {
-        perror("mkfifo");
-        return -1;
-    }
-    return 0;
-}
+// Definición de las rutas (ajusta si es necesario)
+const char *BUCKETS_PATH = "data/index/title_buckets.dat";
+const char *ARRAYS_PATH = "data/index/title_arrays.dat";
 
-// Lee el FIFO (De peticiones)
-static char *read_line_fd(int fd) {
-    char *buf = malloc(BUF_SZ);
-    if (!buf) return NULL;
-    size_t pos = 0;
-    while (1) {
-        ssize_t r = read(fd, buf + pos, 1);
-        if (r <= 0) {
-            if (pos == 0) { free(buf); return NULL; } 
-            break;
-        }
-        if (buf[pos] == '\n') { buf[pos] = '\0'; return buf; }
-        pos++;
-        if (pos + 1 >= BUF_SZ) break; // if too long, truncate
-    }
-    buf[pos] = '\0';
-    return buf;
-}
+/**
+ * @brief Maneja una única conexión de cliente.
+ * * Lee una petición (protocolo: [uint32_t len][char* query]),
+ * busca en el índice y envía una respuesta 
+ * (protocolo: [int32_t count][off_t* results]).
+ * * @param h Handle del índice (fd's de buckets y arrays)
+ * @param client_fd File descriptor del socket del cliente
+ */
+static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
+    printf("Cliente conectado. Esperando consulta...\n");
 
-// Escribe en el FIFO (De respuestas)
-static int write_line_fd(int fd, const char *s) {
-    size_t len = strlen(s);
-    ssize_t w = write(fd, s, len);
-    if (w != (ssize_t)len) return -1;
-    if (write(fd, "\n", 1) != 1) return -1;
-    return 0;
-}
-
-int main() {
-    const char *index_dir = INDEX_DIR;
-    const char *csv_path = CSV_PATH;
-
-    /* COMPROBACIONES DEL FIFO */
-    if (ensure_fifo(REQ_FIFO) != 0) return 1;
-    if (ensure_fifo(RSP_FIFO) != 0) return 1;
-
-    int req_fd = open(REQ_FIFO, O_RDWR);
-    if (req_fd < 0) { printf("fifo de peticiones"); return 1; }
-    int rsp_fd = open(RSP_FIFO, O_RDWR);
-    if (rsp_fd < 0) { perror("abrir fifo de respuestas"); close(req_fd); return 1; }
-
-
-    char title_buckets[1024], title_arrays[1024];
-    snprintf(title_buckets, sizeof(title_buckets), "%s/title_buckets.dat", index_dir);
-    snprintf(title_arrays, sizeof(title_arrays), "%s/title_arrays.dat", index_dir);
-
-    /* CONSTRUYE EL INDICE */
-    int need_build = 0;
-    if (access(title_buckets, F_OK) != 0) {
-        printf("Falta archivo de índice: %s\n", title_buckets);
-        need_build = 1;
-    }
-
-    if (need_build) {
-        printf("Construyendo índices en '%s'...\n", INDEX_DIR);
-        if (build_index_stream(CSV_PATH) != 0) {
-            fprintf(stderr, "Fallo al construir los índices\n");
-            return 1;
-        }
-        printf("Índices construidos.\n");
-    } else {
-        printf("Archivos de índice encontrados.\n");
-    }
-
-    index_handle_t th; // Handle de autor y titulo
-    if (index_open(&th, title_buckets, title_arrays) != 0) {
-        fprintf(stderr, "Fallo al abrir el índice de títulos\n");
-    }
-    printf("Esperando peticiones de busqueda\n");
-    fflush(stdout);
-
-    FILE *csvf = fopen(csv_path, "rb");
-    if(!csvf) {
-        printf("Fatal: No se puede abrir el archivo CSV %s:\n", csv_path);
-        close(req_fd);
-        close(rsp_fd);
-        return 1;
+    // --- 1. Leer Petición del Cliente ---
+    
+    // Leer la longitud de la consulta (4 bytes)
+    uint32_t query_len;
+    ssize_t r = read(client_fd, &query_len, sizeof(query_len));
+    if (r != sizeof(query_len)) {
+        fprintf(stderr, "Error al leer la longitud de la consulta.\n");
+        close(client_fd);
+        return;
     }
     
-    while (1) {
-        char *req = read_line_fd(req_fd);
-        if (!req) { // Revisar como funciona esto
-            usleep(100000);
-            continue;
-        }
-        char *sep = strchr(req, '|'); // pointer al separador
-        char *title = NULL;
-        if (sep) {
-            *sep = '\0';
-            title = req;
-        } else {
-            title = req;
-        }
+    // query_len = ntohl(query_len); // Opcional: manejar endianness si cliente/servidor difieren
 
-        if ((title[0] == '\0')) { 
-            // To do: Revisar si se esta revisando si el titulo es vacio del lado del cliente, si es asi, esto no es necesario pero sirve de verificacion
-            write_line_fd(rsp_fd, "ERR|La búsqueda debe tener al menos un parámetro"); 
-            write_line_fd(rsp_fd, "<END>");
-            free(req);
-            continue;
-        }
-
-        printf("Buscando título: '%s'\n", title);
-        off_t *offs = NULL;
-        uint32_t count = 0;
-        
-        int rc = index_lookup(&th, title, &offs, &count);
-        if (rc != 0) {
-            write_line_fd(rsp_fd, "ERR|Error interno en la búsqueda");
-            write_line_fd(rsp_fd, "<END>");
-            free(req);
-            continue;
-        }
-        
-
-        if (count == 0) {
-            write_line_fd(rsp_fd, "OK");
-            write_line_fd(rsp_fd, "<END>");
-            free(req);
-            continue;
-        }
-
-        
-        if (!csvf) {
-            write_line_fd(rsp_fd, "ERR|No se puede abrir el archivo CSV");
-            write_line_fd(rsp_fd, "<END>");
-            free(offs);
-            free(req);
-            continue;
-        }
-
-        write_line_fd(rsp_fd, "OK");
-        for (uint32_t i = 0; i < count; ++i) {
-            off_t off = (off_t)offs[i];
-            if (fseeko(csvf, off, SEEK_SET) != 0) {
-                continue;
-            }
-            char *line = NULL;
-            size_t llen = 0;
-            ssize_t r = getline(&line, &llen, csvf);
-            if (r > 0) {
-                if (line[r-1] == '\n') line[r-1] = '\0';
-                write_line_fd(rsp_fd, line);
-            }
-            free(line);
-        }
-        write_line_fd(rsp_fd, "<END>");
-
-        free(offs);
-        free(req);
+    // Reservar memoria y leer la consulta
+    char *query_buf = malloc(query_len + 1);
+    if (!query_buf) {
+        perror("malloc");
+        close(client_fd);
+        return;
     }
-    fclose(csvf);
-    index_close(&th);
-    close(req_fd);
-    close(rsp_fd);
+
+    r = read(client_fd, query_buf, query_len);
+    if (r != query_len) {
+        fprintf(stderr, "Error al leer la consulta.\n");
+        free(query_buf);
+        close(client_fd);
+        return;
+    }
+    query_buf[query_len] = '\0'; // Asegurar NUL-terminator para index_lookup
+
+    // --- 2. Procesar la Consulta ---
+    
+    off_t *offsets = NULL;
+    uint32_t count = 0;
+    int lookup_status = index_lookup(h, query_buf, &offsets, &count);
+
+    int32_t response_count;
+    if (lookup_status != 0) {
+        response_count = -1; // Código de error
+        count = 0; // No enviaremos datos
+        fprintf(stderr, "Error durante index_lookup.\n");
+    } else {
+        response_count = (int32_t)count;
+        printf("Consulta '%s' procesada. Resultados: %u\n", query_buf, count);
+    }
+
+    // --- 3. Enviar Respuesta al Cliente ---
+
+    // Enviar el número de resultados (o código de error)
+
+    ssize_t w = write(client_fd, &response_count, sizeof(response_count));
+    if (w != sizeof(response_count)) {
+        fprintf(stderr, "Error al escribir el conteo de respuesta.\n");
+        free(query_buf);
+        if (offsets) free(offsets);
+        close(client_fd);
+        return;
+    }
+
+    // Si encontramos resultados, los leemos del CSV y los enviamos
+    if (count > 0) {
+        char *line_buf = NULL; // Buffer para getline
+        size_t line_buf_size = 0;
+        ssize_t line_len;
+
+        for (uint32_t i = 0; i < count; i++) {
+            // Buscamos el offset en el CSV
+            // ADVERTENCIA: fseek/getline NO es thread-safe.
+            if (fseek(csv_fp, offsets[i], SEEK_SET) != 0) {
+                perror("fseek");
+                continue; // Saltar este resultado
+            }
+            
+            // Leemos la línea completa
+            line_len = getline(&line_buf, &line_buf_size, csv_fp);
+            if (line_len == -1) {
+                perror("getline");
+                continue; // Saltar este resultado
+            }
+            
+            // Enviamos la longitud de la línea
+            uint32_t net_line_len = (uint32_t)line_len;
+            if (write(client_fd, &net_line_len, sizeof(net_line_len)) != sizeof(net_line_len)) {
+                fprintf(stderr, "Error al escribir longitud de línea\n");
+                break; // Salir del bucle for
+            }
+            
+            // Enviamos la línea
+            if (write(client_fd, line_buf, net_line_len) != (ssize_t)net_line_len) {
+                fprintf(stderr, "Error al escribir datos de línea\n");
+                break; // Salir del bucle for
+            }
+        }
+        free(line_buf); // Liberar el buffer de getline
+    }
+
+    // --- 4. Limpieza ---
+    free(query_buf);
+    if (offsets) {
+        free(offsets); // index_lookup alocó esto, lo liberamos aquí.
+    }
+    close(client_fd);
+    printf("Cliente desconectado.\n");
+}
+
+
+int main() {
+    // --- 1. Abrir el Índice ---
+    index_handle_t index_h;
+    if (index_open(&index_h, BUCKETS_PATH, ARRAYS_PATH) != 0) {
+        fprintf(stderr, "Error: No se pudo abrir el índice. ¿Ejecutaste el builder?\n");
+        return 1;
+    }
+    printf("Índice cargado (FDs: b=%d, a=%d)\n", index_h.buckets_fd, index_h.arrays_fd);
+
+
+    FILE *csv_fp = fopen(CSV_PATH, "r");
+    if (csv_fp == NULL) {
+        perror("fopen (CSV_PATH)");
+        fprintf(stderr, "Error: No se pudo abrir el archivo CSV: %s\n", CSV_PATH);
+        index_close(&index_h);
+        return 1;
+    }
+    printf("Archivo CSV '%s' abierto para lectura.\n", CSV_PATH);
+
+    // --- 2. Configurar el Socket ---
+    int server_fd, client_fd;
+    struct sockaddr_in server_addr, client_addr;
+    socklen_t client_len = sizeof(client_addr);
+
+    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (server_fd < 0) {
+        perror("socket");
+        return 1;
+    }
+
+    // Opcional: Reusar el puerto si está en TIME_WAIT
+    int opt = 1;
+    if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
+        perror("setsockopt SO_REUSEADDR");
+    }
+
+    // Configurar la dirección del servidor
+    memset(&server_addr, 0, sizeof(server_addr));
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Escuchar en todas las IPs
+    server_addr.sin_port = htons(SERVER_PORT);
+
+    // --- 3. Bind y Listen ---
+    if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("bind");
+        close(server_fd);
+        return 1;
+    }
+
+    if (listen(server_fd, LISTEN_BACKLOG) < 0) {
+        perror("listen");
+        close(server_fd);
+        return 1;
+    }
+
+    printf("Servidor escuchando en el puerto %d...\n", SERVER_PORT);
+
+    // --- 4. Bucle de Aceptación ---
+    while (1) {
+        client_fd = accept(server_fd, (struct sockaddr *)&client_addr, &client_len);
+        if (client_fd < 0) {
+            perror("accept");
+            continue; // Seguir intentando
+        }
+
+        // Manejar al cliente. 
+        // (Nota: Esto es iterativo. Para múltiples clientes simultáneos
+        // se necesitarían hilos, forks o I/O no bloqueante, 
+        // pero mantengámoslo simple por ahora).
+        handle_client(&index_h, csv_fp, client_fd);
+    }
+
+    // --- 5. Cierre (nunca se alcanza en este bucle) ---
+    printf("Cerrando servidor...\n");
+    close(server_fd);
+    fclose(csv_fp);
+    index_close(&index_h);
     return 0;
 }
