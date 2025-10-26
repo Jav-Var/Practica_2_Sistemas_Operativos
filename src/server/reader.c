@@ -59,7 +59,11 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
     
     off_t cur = head; 
     char *normalized_key = normalize_string(key); // Solo usamos la llave normalizada
-
+    if (!normalized_key){
+        free(normalized_key);
+        return -1;
+    }
+    size_t nkey_len = strlen(normalized_key);
     while (cur != 0) { // Recorre la lista enlazada
         arrays_node_t node = {.key_len = 0, .key = NULL, .entry_offset = 0, .next_ptr = 0};
         if (arrays_read_node_full(h->arrays_fd, cur, &node) != 0) { // Lee los datos del nodo
@@ -72,7 +76,7 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
 
         if (node.key) { 
             printf("Read: %s\n", node.key); //
-            if (strcmp(node.key, normalized_key) == 0) { // nota: node.key ya es una llave normalizada
+            if (strncmp(node.key, normalized_key,nkey_len) == 0) { // nota: node.key ya es una llave normalizada
                 if (cnt >= cap) { // Si se excede el tamaño del array dinamico, realocar con doble de tamaño
                     uint32_t new_cap = cap * 2;
                     off_t *tmp = realloc(results, sizeof(off_t) * new_cap); // Copia del array con doble de tamaño

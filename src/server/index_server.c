@@ -1,3 +1,4 @@
+#define _GNU_SOURCE
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +24,7 @@ const char *ARRAYS_PATH = "data/index/title_arrays.dat";
  * * @param h Handle del índice (fd's de buckets y arrays)
  * @param client_fd File descriptor del socket del cliente
  */
-static void handle_client(index_handle_t *h, int client_fd) {
+static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
     printf("Cliente conectado. Esperando consulta...\n");
 
     // --- 1. Leer Petición del Cliente ---
@@ -75,19 +76,51 @@ static void handle_client(index_handle_t *h, int client_fd) {
     // --- 3. Enviar Respuesta al Cliente ---
 
     // Enviar el número de resultados (o código de error)
-    // int32_t net_count = htonl(response_count); // Opcional: manejar endianness
+
     ssize_t w = write(client_fd, &response_count, sizeof(response_count));
     if (w != sizeof(response_count)) {
         fprintf(stderr, "Error al escribir el conteo de respuesta.\n");
+        free(query_buf);
+        if (offsets) free(offsets);
+        close(client_fd);
+        return;
     }
 
-    // Enviar los offsets si hay resultados
+    // Si encontramos resultados, los leemos del CSV y los enviamos
     if (count > 0) {
-        size_t results_size = count * sizeof(off_t);
-        w = write(client_fd, offsets, results_size);
-        if (w != (ssize_t)results_size) {
-            fprintf(stderr, "Error al escribir los offsets de respuesta.\n");
+        char *line_buf = NULL; // Buffer para getline
+        size_t line_buf_size = 0;
+        ssize_t line_len;
+
+        for (uint32_t i = 0; i < count; i++) {
+            // Buscamos el offset en el CSV
+            // ADVERTENCIA: fseek/getline NO es thread-safe.
+            if (fseek(csv_fp, offsets[i], SEEK_SET) != 0) {
+                perror("fseek");
+                continue; // Saltar este resultado
+            }
+            
+            // Leemos la línea completa
+            line_len = getline(&line_buf, &line_buf_size, csv_fp);
+            if (line_len == -1) {
+                perror("getline");
+                continue; // Saltar este resultado
+            }
+            
+            // Enviamos la longitud de la línea
+            uint32_t net_line_len = (uint32_t)line_len;
+            if (write(client_fd, &net_line_len, sizeof(net_line_len)) != sizeof(net_line_len)) {
+                fprintf(stderr, "Error al escribir longitud de línea\n");
+                break; // Salir del bucle for
+            }
+            
+            // Enviamos la línea
+            if (write(client_fd, line_buf, net_line_len) != (ssize_t)net_line_len) {
+                fprintf(stderr, "Error al escribir datos de línea\n");
+                break; // Salir del bucle for
+            }
         }
+        free(line_buf); // Liberar el buffer de getline
     }
 
     // --- 4. Limpieza ---
@@ -108,6 +141,16 @@ int main() {
         return 1;
     }
     printf("Índice cargado (FDs: b=%d, a=%d)\n", index_h.buckets_fd, index_h.arrays_fd);
+
+
+    FILE *csv_fp = fopen(CSV_PATH, "r");
+    if (csv_fp == NULL) {
+        perror("fopen (CSV_PATH)");
+        fprintf(stderr, "Error: No se pudo abrir el archivo CSV: %s\n", CSV_PATH);
+        index_close(&index_h);
+        return 1;
+    }
+    printf("Archivo CSV '%s' abierto para lectura.\n", CSV_PATH);
 
     // --- 2. Configurar el Socket ---
     int server_fd, client_fd;
@@ -159,12 +202,13 @@ int main() {
         // (Nota: Esto es iterativo. Para múltiples clientes simultáneos
         // se necesitarían hilos, forks o I/O no bloqueante, 
         // pero mantengámoslo simple por ahora).
-        handle_client(&index_h, client_fd);
+        handle_client(&index_h, csv_fp, client_fd);
     }
 
     // --- 5. Cierre (nunca se alcanza en este bucle) ---
     printf("Cerrando servidor...\n");
     close(server_fd);
+    fclose(csv_fp);
     index_close(&index_h);
     return 0;
 }
