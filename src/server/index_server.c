@@ -197,17 +197,17 @@ static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
 }
 
 int main() {
-    // --- 1. Abrir el Índice ---
-    build_index_stream(CSV_PATH);
+    // --- Abrir el Índice ---
+    //build_index_stream(CSV_PATH); // Llamar cuando se pase --build como argumento
+    
     index_handle_t index_h;
     if (index_open(&index_h, BUCKETS_PATH, ARRAYS_PATH) != 0) {
-        fprintf(stderr, "Error: No se pudo abrir el índice. ¿Ejecutaste el builder?\n");
+        fprintf(stderr, "Error: No se pudo abrir el índice. Para construir el indice use --build\n");
         return 1;
     }
     printf("Índice cargado (FDs: b=%d, a=%d)\n", index_h.buckets_fd, index_h.arrays_fd);
 
-
-    FILE *csv_fp = fopen(CSV_PATH, "r");
+    FILE *csv_fp = fopen(CSV_PATH, "r"); // Dataset
     if (csv_fp == NULL) {
         perror("fopen (CSV_PATH)");
         fprintf(stderr, "Error: No se pudo abrir el archivo CSV: %s\n", CSV_PATH);
@@ -216,30 +216,30 @@ int main() {
     }
     printf("Archivo CSV '%s' abierto para lectura.\n", CSV_PATH);
 
-    // --- 2. Configurar el Socket ---
+    // --- Configurar el Socket ---
     int server_fd, client_fd;
-    struct sockaddr_in server_addr, client_addr;
+    struct sockaddr_in server_addr, client_addr; // Direcciones del servidor y cliente
     socklen_t client_len = sizeof(client_addr);
 
-    server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    server_fd = socket(AF_INET, SOCK_STREAM, 0); // Socket del server
     if (server_fd < 0) {
         perror("socket");
         return 1;
     }
 
-    // Opcional: Reusar el puerto si está en TIME_WAIT
+    // Reusar el puerto si está en TIME_WAIT (Opciones de socket)
     int opt = 1;
     if (setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt)) < 0) {
         perror("setsockopt SO_REUSEADDR");
     }
 
     // Configurar la dirección del servidor
-    memset(&server_addr, 0, sizeof(server_addr));
+    memset(&server_addr, 0, sizeof(server_addr)); 
     server_addr.sin_family = AF_INET;
     server_addr.sin_addr.s_addr = htonl(INADDR_ANY); // Escuchar en todas las IPs
     server_addr.sin_port = htons(SERVER_PORT);
 
-    // --- 3. Bind y Listen ---
+    // --- Bind y Listen ---
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("bind");
         close(server_fd);
