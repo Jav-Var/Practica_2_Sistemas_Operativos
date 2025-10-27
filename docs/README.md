@@ -93,16 +93,21 @@ Se definió un protocolo simple de prefijo de longitud para la comunicación:
 
 ## Ejemplos de uso
 ### Búsqueda por título de libro
-<img width="1809" height="950" alt="image" src="https://github.com/user-attachments/assets/dab73139-af65-4e05-8bd3-56189067d39f" />
+
+<img width="1745" height="397" alt="LibroConUnaSolaAparición" src="https://github.com/user-attachments/assets/0c7418fe-acad-4551-baef-b8352f545609" />
 
 ### Búsqueda sin resultados
-<img width="1668" height="585" alt="Captura desde 2025-10-13 17-28-51" src="https://github.com/user-attachments/assets/59ad0ec2-981c-4a70-9cb6-02f9e74e3292" />
+<img width="1055" height="489" alt="BúsquedaSinLibro" src="https://github.com/user-attachments/assets/231ee0c7-0f59-41a7-a74a-ed7a05469b3a" />
 
-### Búsqueda con más de un resultado
-<img width="1810" height="937" alt="Captura desde 2025-10-13 17-32-23" src="https://github.com/user-attachments/assets/b0b67272-d036-4074-ba90-21649662125e" />
+### Búsqueda con varios resultados
+<img width="1739" height="1047" alt="BusquedaconLibroExistente" src="https://github.com/user-attachments/assets/d3b49dc1-fc5d-4cf2-8979-ec96bd4c4923" />
 
 ### Agregar un título
+<img width="1730" height="751" alt="Creacióndeunnuevolibro" src="https://github.com/user-attachments/assets/698da48c-800a-4876-b3c8-dcb2fbdbb300" />
 
-### Buscar el título agregado
+### Buscar el título agregado sin salir del server
+<img width="1722" height="612" alt="BúsquedadelLibroNuevo" src="https://github.com/user-attachments/assets/c830072d-0df7-4e5d-9112-0c069869d259" />
+### Buscar el título agregado después de reiniciar el server
+<img width="1726" height="431" alt="Busquedadespuésdecerrarelserver" src="https://github.com/user-attachments/assets/49ca1bf7-32c8-4b00-abe1-387d98973452" />
 
 
