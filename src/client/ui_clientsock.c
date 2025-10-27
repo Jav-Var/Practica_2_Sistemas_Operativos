@@ -18,8 +18,6 @@
 #define BACKLOG 10
 
 
-
-
 static int ensure_socket(int server_fd) {
    if(server_fd<0){
        perror("Error al crear el socket");
@@ -130,7 +128,6 @@ int main(){
 
            r = send(sock,req,strlen(req),0);
            ensure_send(r);
-
 
        } else if (strcmp(opt, "3") == 0) {
            free(opt);

@@ -8,6 +8,7 @@
 #include <netinet/in.h>
 #include "reader.h" // Nuestro motor de búsqueda
 #include "common.h" // Para las rutas y safe_pread/pwrite
+#include "builder.h" // Para agregar nuevos libros al índice
 
 #define SERVER_PORT 8080
 #define LISTEN_BACKLOG 10
@@ -24,7 +25,51 @@ const char *ARRAYS_PATH = "data/index/title_arrays.dat";
  * * @param h Handle del índice (fd's de buckets y arrays)
  * @param client_fd File descriptor del socket del cliente
  */
-static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
+
+static void handle_add_book(int client_fd) {
+    uint32_t line_len;
+
+    // Leer la longitud de la línea CSV
+    if (read(client_fd, &line_len, sizeof(line_len)) != sizeof(line_len)) {
+        perror("read (line_len)");
+        close(client_fd);
+        return;
+    }
+                  
+    // Leer la línea completa
+    char *line_buf = malloc(line_len + 1);
+    if (!line_buf) {
+        perror("malloc");
+        close(client_fd);  
+        return;
+    }
+
+    if (read(client_fd, line_buf, line_len) != (ssize_t)line_len) {
+        perror("read (csv_line)");
+        free(line_buf);
+        close(client_fd);
+        return;
+    }
+    line_buf[line_len] = '\0';
+
+    printf("Recibido nuevo libro:\n%s\n", line_buf);
+
+    // Guardar en el CSV e indexar
+    if (build_index_line(CSV_PATH, line_buf) == 0) {
+        printf("Libro indexado correctamente.\n");
+        uint32_t ok = 1;
+        write(client_fd, &ok, sizeof(ok));
+    } else {
+        fprintf(stderr, "Error al agregar libro.\n");
+        uint32_t fail = 0;
+        write(client_fd, &fail, sizeof(fail));
+    }
+
+    free(line_buf);
+    close(client_fd);
+}
+
+static void handle_lookup(index_handle_t *h, FILE *csv_fp, int client_fd) {
     printf("Cliente conectado. Esperando consulta...\n");
 
     // --- 1. Leer Petición del Cliente ---
@@ -132,9 +177,28 @@ static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
     printf("Cliente desconectado.\n");
 }
 
+static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
+    uint32_t op_len;
+    read(client_fd, &op_len, sizeof(op_len));
+
+    char op_buf[64];
+    read(client_fd, op_buf, op_len);
+    op_buf[op_len] = '\0';
+
+    if (strcmp(op_buf, "OP_LOOKUP") == 0) {
+        handle_lookup(h, csv_fp, client_fd);
+    } else if (strcmp(op_buf, "OP_ADD_BOOK") == 0) {
+        handle_add_book(client_fd);
+    } else {
+        fprintf(stderr, "Operación desconocida: %s\n", op_buf);
+    }
+
+    close(client_fd);
+}
 
 int main() {
     // --- 1. Abrir el Índice ---
+    build_index_stream(CSV_PATH);
     index_handle_t index_h;
     if (index_open(&index_h, BUCKETS_PATH, ARRAYS_PATH) != 0) {
         fprintf(stderr, "Error: No se pudo abrir el índice. ¿Ejecutaste el builder?\n");

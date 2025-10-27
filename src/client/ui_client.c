@@ -46,6 +46,12 @@ static int perform_search(const char *query) {
         return -1;
     }
 
+    const char *op_code = "OP_LOOKUP";
+    uint32_t op_len = (uint32_t)strlen(op_code);
+    write(sock_fd, &op_len, sizeof(op_len));
+    write(sock_fd, op_code, op_len);
+
+
     printf("Conectado. Buscando: '%s'\n", query);
 
     // --- 2. Enviar Petición de Búsqueda ---
@@ -122,25 +128,160 @@ static int perform_search(const char *query) {
     return 0;
 }
 
+void trim_newline(char *str) {
+    str[strcspn(str, "\n")] = 0;
+}
+
 /**
  * @brief (STUB) Función placeholder para 'Agregar Título'.
  */
-static int perform_add_stub(const char *title_to_add) {
-    if (title_to_add == NULL || title_to_add[0] == '\0') {
-        printf("Error: No hay título para agregar. Use la opción 1 primero.\n");
-        return -1;
-    }
-    
-    printf("\n--- FUNCIONALIDAD NO IMPLEMENTADA ---\n");
-    printf("La adición dinámica de títulos ('%s') es una característica de Fase 3.\n", title_to_add);
-    printf("Requiere modificar el servidor para soportar escrituras y sincronización (mutex).\n\n");
-    
+int perform_add_book(void) {
+    char titulo[MAX_QUERY_LEN] = {0};
+    char autor[MAX_QUERY_LEN] = {0};
+    char imagen_url[MAX_QUERY_LEN] = {0};
+    char num_pages[MAX_QUERY_LEN] = {0};
+    char average_rating[MAX_QUERY_LEN] = {0};
+    char text_review_account[MAX_QUERY_LEN] = {0};
+    char descripcion[MAX_QUERY_LEN] = {0};
+    char star_5_count[MAX_QUERY_LEN] = {0};
+    char star_4_count[MAX_QUERY_LEN] = {0};
+    char star_3_count[MAX_QUERY_LEN] = {0};
+    char star_2_count[MAX_QUERY_LEN] = {0};
+    char star_1_count[MAX_QUERY_LEN] = {0};
+    char total_rating[MAX_QUERY_LEN] = {0};
+    char genres[MAX_QUERY_LEN] = {0};
+
+    printf("Título del libro nuevo: ");
+    fgets(titulo, sizeof(titulo), stdin);
+    trim_newline(titulo);
+
+    printf("Autor del libro nuevo: ");
+    fgets(autor, sizeof(autor), stdin);
+    trim_newline(autor);
+
+    printf("Enlace a la imagen de portada: ");
+    fgets(imagen_url, sizeof(imagen_url), stdin);
+    trim_newline(imagen_url);
+
+    printf("Número de páginas: ");
+    fgets(num_pages, sizeof(num_pages), stdin);
+    trim_newline(num_pages);
+
+    printf("Calificación promedio: ");
+    fgets(average_rating, sizeof(average_rating), stdin);
+    trim_newline(average_rating);
+
+    printf("Número total de reseñas: ");
+    fgets(text_review_account, sizeof(text_review_account), stdin);
+    trim_newline(text_review_account);
+
+    printf("Descripción: ");
+    fgets(descripcion, sizeof(descripcion), stdin);
+    trim_newline(descripcion);
+
+    printf("Cantidad de calificaciones de 5 estrellas: ");
+    fgets(star_5_count, sizeof(star_5_count), stdin);
+    trim_newline(star_5_count);
+
+    printf("Cantidad de calificaciones de 4 estrellas: ");
+    fgets(star_4_count, sizeof(star_4_count), stdin);
+    trim_newline(star_4_count);
+
+    printf("Cantidad de calificaciones de 3 estrellas: ");
+    fgets(star_3_count, sizeof(star_3_count), stdin);
+    trim_newline(star_3_count);
+
+    printf("Cantidad de calificaciones de 2 estrellas: ");
+    fgets(star_2_count, sizeof(star_2_count), stdin);
+    trim_newline(star_2_count);
+
+    printf("Cantidad de calificaciones de 1 estrella: ");
+    fgets(star_1_count, sizeof(star_1_count), stdin);
+    trim_newline(star_1_count);
+
+    printf("Calificación total: ");
+    fgets(total_rating, sizeof(total_rating), stdin);
+    trim_newline(total_rating);
+
+    printf("Géneros del libro: ");
+    fgets(genres, sizeof(genres), stdin);
+    trim_newline(genres);
+
     // Aquí iría la lógica futura:
     // 1. Conectar al socket
-    // 2. Enviar comando OP_ADD_TITLE
-    // 3. Enviar datos del título
-    // 4. Recibir confirmación (OK o Error)
+
+    int sock_fd;
+    struct sockaddr_in server_addr;
+
+    sock_fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock_fd < 0) {
+        perror("socket");
+        return -1;
+    }
+
+    memset(&server_addr, 0, sizeof(server_addr));
+    //Configuracion del servidor
+    server_addr.sin_family = AF_INET;
+    server_addr.sin_port = htons(SERVER_PORT);
+    if (inet_pton(AF_INET, SERVER_IP, &server_addr.sin_addr) <= 0) {
+        perror("inet_pton (IP inválida)");
+        close(sock_fd);
+        return -1;
+    }
+
+    if (connect(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
+        perror("connect (¿Está el servidor corriendo?)");
+        close(sock_fd);
+        return -1;
+    }
+    // 2. Enviar comando OP_ADD_BOOK
+
+    const char *op_code = "OP_ADD_BOOK";
+    uint32_t op_code_len = (uint32_t)strlen(op_code);
     
+    if(write(sock_fd, &op_code_len, sizeof(op_code_len)) != sizeof(op_code_len)) {
+        perror("write (op_code length)");
+        close(sock_fd);
+        return -1;
+    }
+    if(write(sock_fd, op_code, op_code_len) != (ssize_t)op_code_len) {
+        perror("write (op_code)");
+        close(sock_fd);
+        return -1;
+    }
+
+    // 3. Enviar datos del título
+
+    //Construir el mensaje csv 
+    char buffer[MAX_QUERY_LEN * 2];
+    snprintf(buffer, sizeof(buffer), "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+             titulo, autor, imagen_url, num_pages, average_rating,
+             text_review_account, descripcion, star_5_count, star_4_count,
+             star_3_count, star_2_count, star_1_count, total_rating, genres);
+
+
+    uint32_t data_len = (uint32_t)strlen(buffer);
+    if (write(sock_fd, &data_len, sizeof(data_len)) != sizeof(data_len)) { //Envia tamano del mensaje
+        perror("write (data_len)");
+        close(sock_fd);
+        return -1;
+    }
+    if (write(sock_fd, buffer, data_len) != (ssize_t)data_len) { //Envia el mensaje
+        perror("write (data)");
+        close(sock_fd);
+        return -1;
+    }   
+    // 4. Recibir confirmación (OK o Error)
+    char response[256];
+    ssize_t resp_len = read(sock_fd, response, sizeof(response) - 1);
+    if (resp_len > 0) {
+        response[resp_len] = '\0';
+        printf("Respuesta del servidor: %s\n", response);
+    } else {
+        perror("read (response)");
+    }
+
+    close(sock_fd);
     return 0;
 }
 
@@ -165,7 +306,7 @@ static void print_menu(const char *current_title) {
     }
     printf("---------------------------------------\n");
     printf("1. Escribir/Modificar título\n");
-    printf("2. Agregar título al índice (No implementado)\n");
+    printf("2. Agregar libro a la base de datos\n");
     printf("3. Buscar título\n");
     printf("4. Salir\n");
     printf("Seleccione una opción: ");
@@ -211,9 +352,9 @@ int main(int argc, char *argv[]) {
                 }
                 current_title[strcspn(current_title, "\n")] = 0; // Quitar newline
                 break;
-            
-            case 2: // Agregar título (Stub)
-                perform_add_stub(current_title);
+
+            case 2: // Agregar libro a la base de datos
+                perform_add_book();
                 break;
 
             case 3: // Buscar título

@@ -40,6 +40,108 @@ static char *csv_get_field_copy(const char *line, int field_idx) {
     return output_field;
 }
 
+//Similiar a build_index_stream, pero solo para una línea
+int build_index_line(const char *csv_path, const char *line) {
+
+    char buckets_path[1024] = "data/index/title_buckets.dat";
+    char arrays_path[1024] = "data/index/title_arrays.dat";
+
+    int bfd = buckets_open_readwrite(buckets_path); // buckets file descriptor
+    if (bfd < 0) {
+        fprintf(stderr,"open buckets failed\n");
+        return -1;
+    } 
+    int afd = arrays_open(arrays_path); // nodes file descriptor
+    if (afd < 0) { 
+        close(bfd);
+        fprintf(stderr,"open arrays failed\n");
+        return -1;
+    }
+
+    FILE *csv_fp = fopen(csv_path, "a+"); // Abre el dataset
+    if (!csv_fp) {
+        close(bfd);
+        close(afd);
+        fprintf(stderr,"open csv failed\n");
+        return -1;
+    }
+
+    if (fseeko(csv_fp, 0, SEEK_END) != 0) {
+        perror("fseeko");
+        fclose(csv_fp);
+        close(bfd);
+        close(afd);
+        return -1;
+    }
+
+    off_t start_offset = ftello(csv_fp);
+    if (start_offset == (off_t)-1) {
+        perror("ftello");
+        fclose(csv_fp);
+        close(bfd);
+        close(afd);
+        return -1;
+    }
+
+    // Escribir la línea en el archivo CSV
+    if (fprintf(csv_fp, "%s\n", line) < 0) {
+        perror("fprintf");
+        return -1;
+    }
+
+    fflush(csv_fp);
+
+    //Indexar la linea
+    char *title = csv_get_field_copy(line, TITLE_FIELD); // Obtiene titulo de la linea
+        if (title == NULL){
+            return -1;
+        }
+
+        printf("Añadiendo %s a la tabla hash\n", title);
+
+        char *normalized_title = normalize_string(title); // Obtiene el titulo normalizado (Solo alfanumericos)
+        free(title);
+        if (normalized_title == NULL) {
+            return -1;
+        }
+
+        // Hash 
+        uint64_t h = hash_key_prefix(normalized_title, strlen(normalized_title), DEFAULT_HASH_SEED);
+        uint64_t mask = NUM_BUCKETS - 1;
+        uint64_t bucket = bucket_id_from_hash(h, mask);
+
+        // Obtiene la cabeza de la lista enlazada
+        off_t old_head = buckets_read_head(bfd, bucket);
+
+        // Inserta los datos del nodo en el archivo
+        arrays_node_t node;
+        node.key_len = (uint16_t)strlen(normalized_title);
+        node.key = strdup(normalized_title);
+        node.entry_offset = start_offset;
+        node.next_ptr = old_head;      
+
+        off_t new_node_off = arrays_append_node(afd, &node);
+        free(normalized_title);
+        printf("Datos del nodo leidos\n");
+
+        if (new_node_off == 0) {
+            fprintf(stderr, "Error al insertar nodo\n");
+            arrays_free_node(&node);
+            return -1;
+        }
+        
+        arrays_free_node(&node);
+        
+        if (buckets_write_head(bfd, bucket, new_node_off) != 0) {
+            fprintf(stderr, "failed write bucket head\n");
+        }
+
+        fclose(csv_fp);
+        close(bfd);
+        close(afd);
+        return 0;
+}
+
 /* Construye los archivos de indices */
 int build_index_stream(const char *csv_path) {
     char buckets_path[1024] = "data/index/title_buckets.dat";
