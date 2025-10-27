@@ -149,7 +149,6 @@ int perform_add_book(void) {
     char star_2_count[MAX_QUERY_LEN] = {0};
     char star_1_count[MAX_QUERY_LEN] = {0};
     char total_rating[MAX_QUERY_LEN] = {0};
-    char genres[MAX_QUERY_LEN] = {0};
 
     printf("Título del libro nuevo: ");
     fgets(titulo, sizeof(titulo), stdin);
@@ -203,10 +202,6 @@ int perform_add_book(void) {
     fgets(total_rating, sizeof(total_rating), stdin);
     trim_newline(total_rating);
 
-    printf("Géneros del libro: ");
-    fgets(genres, sizeof(genres), stdin);
-    trim_newline(genres);
-
     // Aquí iría la lógica futura:
     // 1. Conectar al socket
 
@@ -254,10 +249,10 @@ int perform_add_book(void) {
 
     //Construir el mensaje csv 
     char buffer[MAX_QUERY_LEN * 2];
-    snprintf(buffer, sizeof(buffer), "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
+    snprintf(buffer, sizeof(buffer), "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
              titulo, autor, imagen_url, num_pages, average_rating,
              text_review_account, descripcion, star_5_count, star_4_count,
-             star_3_count, star_2_count, star_1_count, total_rating, genres);
+             star_3_count, star_2_count, star_1_count, total_rating);
 
 
     uint32_t data_len = (uint32_t)strlen(buffer);
