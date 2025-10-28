@@ -12,7 +12,7 @@
 #define INDEX_MAGIC "IDX1" 
 #define INDEX_VERSION 1 
 
-#define CSV_PATH "data/dataset/books_data_test.csv"
+#define CSV_PATH "data/dataset/books_data.csv"
 #define INDEX_DIR "data/index"
 #define NUM_DATASET_FIELDS 14
 #define NUM_BUCKETS 1048576 // Debe ser potencia de dos

@@ -312,7 +312,7 @@ static void print_menu(const char *current_title) {
     printf("Seleccione una opción: ");
 }
 
-int main(int argc, char *argv[]) {
+int main() {
     char current_title[MAX_QUERY_LEN] = {0};  
     char input_buffer[MAX_QUERY_LEN] = {0}; // Buffer temporal para usar con fgets
     int choice = 0; // Opcion del menu

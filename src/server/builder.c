@@ -97,8 +97,6 @@ int build_index_line(const char *csv_path, const char *line) {
             return -1;
         }
 
-        // printf("Añadiendo %s al indice\n", title); // Para debuggear
-
         char *normalized_title = normalize_string(title); // Obtiene el titulo normalizado (Solo alfanumericos)
         free(title);
         if (normalized_title == NULL) {
@@ -213,7 +211,6 @@ int build_index_stream(const char *csv_path) {
         }
         char *title = csv_get_field_copy(line, TITLE_FIELD); // Obtiene titulo de la linea
         if (title == NULL) continue; 
-        printf("Añadiendo %s a la tabla hash\n", title);
 
         char *normalized_title = normalize_string(title); // Obtiene el titulo normalizado (Solo alfanumericos)
         free(title);
@@ -235,7 +232,6 @@ int build_index_stream(const char *csv_path) {
         node.next_ptr = old_head;      
         off_t new_node_off = arrays_append_node(afd, &node);
         free(normalized_title);
-        printf("Datos del nodo leidos\n");
 
         if (new_node_off == 0) {
             fprintf(stderr, "Error al insertar nodo\n");

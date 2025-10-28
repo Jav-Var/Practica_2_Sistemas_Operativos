@@ -70,20 +70,19 @@ off_t arrays_append_node(int fd, const arrays_node_t *node) {
     pos += sizeof(off_t);
 
     off_t new_node_off = lseek(fd, 0, SEEK_END); // Devuelve el offset del final del archivo
-    if (new_node_off == (off_t)0) { // No insertar al inicio del archivo, el primer byte esta reservado para representar NULL
+    /*if (new_node_off == (off_t)0) { // No insertar al inicio del archivo, el primer byte esta reservado para representar NULL
         char null_byte = 0;
         if (write(fd, &null_byte, 1) != 1) {
             free(buf);
             return 0;
         }
         new_node_off = 1;  // Primer nodo va en offset 1
-    }
+    }*/
     if (safe_pwrite(fd, buf, node_size, new_node_off) != (ssize_t)node_size) {
         free(buf);
         return 0;
     }
     free(buf);
-    fsync(fd);
     return (off_t)new_node_off;
 }
 
