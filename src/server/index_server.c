@@ -139,7 +139,6 @@ static void handle_lookup(index_handle_t *h, FILE *csv_fp, int client_fd) {
 
         for (uint32_t i = 0; i < count; i++) {
             // Buscamos el offset en el CSV
-            // ADVERTENCIA: fseek/getline NO es thread-safe.
             if (fseek(csv_fp, offsets[i], SEEK_SET) != 0) {
                 perror("fseek");
                 continue; // Saltar este resultado
