@@ -265,11 +265,18 @@ int perform_add_book(void) {
         return -1;
     }   
     // 4. Recibir confirmación (OK o Error)
-    char response[256];
-    ssize_t resp_len = read(sock_fd, response, sizeof(response) - 1);
-    if (resp_len > 0) {
-        response[resp_len] = '\0';
-        printf("Respuesta del servidor: %s\n", response);
+    uint32_t server_response;
+    ssize_t resp_len = read(sock_fd, &server_response, sizeof(server_response));
+
+    if (resp_len == sizeof(server_response)) {
+        // (Opcional, pero bueno para endianness: server_response = ntohl(server_response);)
+        if (server_response == 1) {
+            printf("Respuesta del servidor: Libro agregado con éxito.\n");
+        } else {
+            printf("Respuesta del servidor: Error al agregar el libro.\n");
+        }
+    } else if (resp_len == 0) {
+        printf("Respuesta del servidor: El servidor cerró la conexión.\n");
     } else {
         perror("read (response)");
     }
