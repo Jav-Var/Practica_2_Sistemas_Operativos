@@ -196,10 +196,15 @@ static void handle_client(index_handle_t *h, FILE *csv_fp, int client_fd) {
     close(client_fd);
 }
 
-int main() {
+int main(int argc, char *argv[]) {
+    for (int i = 1; i < argc; ++i) { // Si se pasa --build como argumento, construye los indices
+        if (strcmp(argv[i], "--build") == 0) {
+            build_index_stream(CSV_PATH);
+            return 0;
+        }
+    }
+
     // --- Abrir el Índice ---
-    //build_index_stream(CSV_PATH); // Llamar cuando se pase --build como argumento
-    
     index_handle_t index_h;
     if (index_open(&index_h, BUCKETS_PATH, ARRAYS_PATH) != 0) {
         fprintf(stderr, "Error: No se pudo abrir el índice. Para construir el indice use --build\n");

@@ -21,7 +21,7 @@ static int perform_search(const char *query) {
         return -1;
     }
 
-    // --- 1. Conectar al Servidor ---
+    // --- Conectar al Servidor ---
     int sock_fd;
     struct sockaddr_in server_addr;
 
@@ -54,9 +54,7 @@ static int perform_search(const char *query) {
 
     printf("Conectado. Buscando: '%s'\n", query);
 
-    // --- 2. Enviar Petición de Búsqueda ---
-    // NOTA: La lógica de 'Agregar Título' necesitaría un protocolo diferente.
-    // Por ahora, solo enviamos el query para búsqueda.
+    // --- Enviar Petición de Búsqueda ---
     
     uint32_t query_len = (uint32_t)strlen(query);
     if (write(sock_fd, &query_len, sizeof(query_len)) != sizeof(query_len)) {
@@ -308,24 +306,9 @@ static void print_menu(const char *current_title) {
 }
 
 int main(int argc, char *argv[]) {
-    // Modo 1: Consulta por argumento (útil para testing rápido)
-    if (argc > 1) {
-        char query_buf[MAX_QUERY_LEN] = {0};
-        size_t current_len = 0;
-        for (int i = 1; i < argc; i++) {
-            size_t arg_len = strlen(argv[i]);
-            if (current_len + arg_len + 1 > MAX_QUERY_LEN) break;
-            memcpy(query_buf + current_len, argv[i], arg_len);
-            current_len += arg_len;
-            if (i < argc - 1) query_buf[current_len++] = ' ';
-        }
-        return perform_search(query_buf);
-    }
-
-    // Modo 2: Interactivo (Menú)
-    char current_title[MAX_QUERY_LEN] = {0};
-    char input_buffer[MAX_QUERY_LEN]; // Buffer temporal para fgets
-    int choice = 0;
+    char current_title[MAX_QUERY_LEN] = {0};  
+    char input_buffer[MAX_QUERY_LEN] = {0}; // Buffer temporal para usar con fgets
+    int choice = 0; // Opcion del menu
 
     while (choice != 4) {
         print_menu(current_title);
