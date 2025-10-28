@@ -29,14 +29,14 @@ const char *linked_list_PATH = "data/index/title_linked_list.dat";
 static void handle_add_book(int client_fd) {
     uint32_t line_len;
 
-    // Leer la longitud de la línea CSV
+    // Leer del socket la longitud de la línea CSV
     if (read(client_fd, &line_len, sizeof(line_len)) != sizeof(line_len)) {
         perror("read (line_len)");
         close(client_fd);
         return;
     }
                   
-    // Leer la línea completa
+    // Reservar memoria para la línea completa
     char *line_buf = malloc(line_len + 1);
     if (!line_buf) {
         perror("malloc");
@@ -44,17 +44,18 @@ static void handle_add_book(int client_fd) {
         return;
     }
 
+    //Leer la linea CSV completa desde el socket
     if (read(client_fd, line_buf, line_len) != (ssize_t)line_len) {
         perror("read (csv_line)");
         free(line_buf);
         close(client_fd);
         return;
     }
-    line_buf[line_len] = '\0';
+    line_buf[line_len] = '\0'; 
 
     printf("Recibido nuevo libro:\n%s\n", line_buf);
 
-    // Guardar en el CSV e indexar
+    // Guardar la linea en el CSV e indexar y confirmar exito
     if (build_index_line(CSV_PATH, line_buf) == 0) {
         printf("Libro indexado correctamente.\n");
         uint32_t ok = 1;

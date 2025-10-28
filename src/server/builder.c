@@ -40,7 +40,7 @@ static char *csv_get_field_copy(const char *line, int field_idx) {
     return output_field;
 }
 
-//Similiar a build_index_stream, pero solo para una línea
+//Similiar a build_index_stream, pero solo para indexar una línea
 int build_index_line(const char *csv_path, const char *line) {
 
     char buckets_path[1024] = "data/index/title_buckets.dat";
@@ -66,6 +66,7 @@ int build_index_line(const char *csv_path, const char *line) {
         return -1;
     }
 
+    //Mover el puntero al final del archivo
     if (fseeko(csv_fp, 0, SEEK_END) != 0) {
         perror("fseeko");
         fclose(csv_fp);
@@ -74,6 +75,7 @@ int build_index_line(const char *csv_path, const char *line) {
         return -1;
     }
 
+    //Obtener el offset del final del archivo
     off_t start_offset = ftello(csv_fp);
     if (start_offset == (off_t)-1) {
         perror("ftello");
@@ -97,7 +99,7 @@ int build_index_line(const char *csv_path, const char *line) {
             return -1;
         }
 
-        char *normalized_title = normalize_string(title); // Obtiene el titulo normalizado (Solo alfanumericos)
+        char *normalized_title = normalize_string(title); // Obtiene el titulo normalizado
         free(title);
         if (normalized_title == NULL) {
             return -1;

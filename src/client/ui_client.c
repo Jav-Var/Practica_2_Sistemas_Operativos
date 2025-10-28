@@ -134,6 +134,8 @@ void trim_newline(char *str) {
  * @brief (STUB) Función placeholder para 'Agregar Título'.
  */
 int perform_add_book(void) {
+
+    //Declarar tamaños de los campos
     char titulo[MAX_QUERY_LEN] = {0};
     char autor[MAX_QUERY_LEN] = {0};
     char imagen_url[MAX_QUERY_LEN] = {0};
@@ -148,6 +150,7 @@ int perform_add_book(void) {
     char star_1_count[MAX_QUERY_LEN] = {0};
     char total_rating[MAX_QUERY_LEN] = {0};
 
+    //Pedir datos al usuario
     printf("Título del libro nuevo: ");
     fgets(titulo, sizeof(titulo), stdin);
     trim_newline(titulo);
@@ -200,9 +203,7 @@ int perform_add_book(void) {
     fgets(total_rating, sizeof(total_rating), stdin);
     trim_newline(total_rating);
 
-    // Aquí iría la lógica futura:
-    // 1. Conectar al socket
-
+    //Conectar al socket del servidor
     int sock_fd;
     struct sockaddr_in server_addr;
 
@@ -213,6 +214,7 @@ int perform_add_book(void) {
     }
 
     memset(&server_addr, 0, sizeof(server_addr));
+
     //Configuracion del servidor
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(SERVER_PORT);
@@ -222,13 +224,14 @@ int perform_add_book(void) {
         return -1;
     }
 
+    // Conectar al servidor
     if (connect(sock_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) < 0) {
         perror("connect (¿Está el servidor corriendo?)");
         close(sock_fd);
         return -1;
     }
-    // 2. Enviar comando OP_ADD_BOOK
-
+    
+    //Enviar comando OP_ADD_BOOK
     const char *op_code = "OP_ADD_BOOK";
     uint32_t op_code_len = (uint32_t)strlen(op_code);
     
@@ -243,9 +246,7 @@ int perform_add_book(void) {
         return -1;
     }
 
-    // 3. Enviar datos del título
-
-    //Construir el mensaje csv 
+    //Construir mensaje CSV
     char buffer[MAX_QUERY_LEN * 2];
     snprintf(buffer, sizeof(buffer), "%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s",
              titulo, autor, imagen_url, num_pages, average_rating,
@@ -253,6 +254,7 @@ int perform_add_book(void) {
              star_3_count, star_2_count, star_1_count, total_rating);
 
 
+    //Enviar la línea CSV al servidor
     uint32_t data_len = (uint32_t)strlen(buffer);
     if (write(sock_fd, &data_len, sizeof(data_len)) != sizeof(data_len)) { //Envia tamano del mensaje
         perror("write (data_len)");
@@ -263,8 +265,9 @@ int perform_add_book(void) {
         perror("write (data)");
         close(sock_fd);
         return -1;
-    }   
-    // 4. Recibir confirmación (OK o Error)
+    }
+
+    //Recibir confirmación del servidor
     uint32_t server_response;
     ssize_t resp_len = read(sock_fd, &server_response, sizeof(server_response));
 
