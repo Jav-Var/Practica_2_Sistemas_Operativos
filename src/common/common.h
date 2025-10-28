@@ -6,15 +6,11 @@
 #include <unistd.h>
 #include <sys/types.h>
 
-#define BUCKETS_HEADER_SIZE 0
-#define ARRAYS_HEADER_SIZE 4096
 #define BUCKET_ENTRY_SIZE 8
-#define INDEX_MAGIC "IDX1" 
-#define INDEX_VERSION 1 
 
 #define CSV_PATH "data/dataset/books_data.csv"
 #define INDEX_DIR "data/index"
-#define NUM_DATASET_FIELDS 14
+#define NUM_DATASET_FIELDS 13
 #define NUM_BUCKETS 1048576 // Debe ser potencia de dos
 #define TITLE_FIELD 0
 #define DEFAULT_HASH_SEED 0x12345678abcdefULL

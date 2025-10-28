@@ -1,4 +1,4 @@
-#include "arrays.h"
+#include "linked_list.h"
 #include "common.h"
 #include <stdlib.h>
 #include <string.h>
@@ -9,7 +9,7 @@
 #include <errno.h>
 
 // Crea el archivo de nodos (Reserva el primer byte para representar null)
-int arrays_create(const char *path) {
+int linked_list_nodes_create(const char *path) {
     int fd = open(path, O_CREAT | O_TRUNC | O_RDWR, 0644);
     /* O_CREAT: Crea el archivo si no existe
      * O_TRUNC: Si existe el archivo, elimina sus contenidos
@@ -31,25 +31,25 @@ int arrays_create(const char *path) {
 }
 
 // Abre el archivo de nodos, retorna el file descriptor
-int arrays_open(const char *path) { // Revisar si es factible eliminar esta funcion
+int linked_list_open(const char *path) { // Revisar si es factible eliminar esta funcion
     int fd = open(path, O_RDWR);
     return fd;
 }
 
 // Retorna el tamaño en bytes de un nodo
-size_t arrays_calc_node_size(uint16_t key_len) {
+size_t linked_list_node_size(uint16_t key_len) {
     // Tamaño de key_len + key + entry_offset + next_ptr
     return sizeof(uint16_t) + (size_t)key_len + sizeof(off_t) + sizeof(off_t);
 }
 
 // Añade un nodo al archivo, retorna el offset del nodo retorna offset 0 si hay error
-off_t arrays_append_node(int fd, const arrays_node_t *node) {
+off_t linked_list_append_node(int fd, const linked_list_node_t *node) {
     if (node == NULL || node->key == NULL) {
         fprintf(stderr, "Error: el nodo a insertar tiene una llave nula\n");
         return 0; 
     } 
     uint16_t key_len = node -> key_len; // Cantidad de caracteres de la key (titulo)
-    size_t node_size = arrays_calc_node_size(key_len);
+    size_t node_size = linked_list_node_size(key_len);
     unsigned char *buf = malloc(node_size); 
     if (buf == NULL) {
         fprintf(stderr, "Error de malloc\n");
@@ -87,7 +87,7 @@ off_t arrays_append_node(int fd, const arrays_node_t *node) {
 }
 
 // Lee la informacion de un nodo (en el archivo de nodos) a un struct
-int arrays_read_node_full(int fd, off_t node_off, arrays_node_t *node) {
+int linked_list_read_node(int fd, off_t node_off, linked_list_node_t *node) {
     if (node == NULL) return -1; 
 
     // Leer el tamaño de la key
@@ -128,7 +128,7 @@ int arrays_read_node_full(int fd, off_t node_off, arrays_node_t *node) {
 }
 
 
-void arrays_free_node(arrays_node_t *node) {
+void linked_list_free_node(linked_list_node_t *node) {
     if (!node) return;
     if (node->key) { free(node->key); node->key = NULL; }
     node->key_len = 0;

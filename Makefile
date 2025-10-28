@@ -20,10 +20,10 @@ SERVER_CORE_SRCS := $(SRCDIR)/server/reader.c \
                     $(SRCDIR)/server/builder.c \
                     $(SRCDIR)/server/hash.c \
                     $(SRCDIR)/server/buckets.c \
-                    $(SRCDIR)/server/arrays.c
+                    $(SRCDIR)/server/linked_list.c
 
 # CLIENT: Código que solo usa el cliente
-CLIENT_CORE_SRCS := $(SRCDIR)/client/ui.c
+CLIENT_CORE_SRCS :=  #
 
 # MAINS: Los puntos de entrada de cada programa
 SERVER_MAIN_SRC := $(SRCDIR)/server/index_server.c

@@ -6,11 +6,11 @@
 // index_handle_t
 typedef struct {
     int buckets_fd;
-    int arrays_fd;
+    int linked_list_fd;
 } index_handle_t;
 
-/* Open an index given paths to buckets and arrays files */
-int index_open(index_handle_t *h, const char *buckets_path, const char *arrays_path);
+/* Open an index given paths to buckets and linked_list files */
+int index_open(index_handle_t *h, const char *buckets_path, const char *linked_list_path);
 
 /* Close index */
 void index_close(index_handle_t *h);

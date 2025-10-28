@@ -1,6 +1,6 @@
 #include "reader.h"
 #include "buckets.h"
-#include "arrays.h"
+#include "linked_list.h"
 #include "common.h"
 #include "hash.h"
 #include "util.h"
@@ -10,22 +10,22 @@
 #include <unistd.h>
 
 // inserta en el handle (struct) la informacion del indice
-int index_open(index_handle_t *h, const char *buckets_path, const char *arrays_path) {
+int index_open(index_handle_t *h, const char *buckets_path, const char *linked_list_path) {
     int bfd = buckets_open_readwrite(buckets_path);
     if (bfd < 0) return -1;
-    int afd = arrays_open(arrays_path);
+    int afd = linked_list_open(linked_list_path);
     if (afd < 0) { close(bfd); return -1; }
     h->buckets_fd = bfd; // Buckets file descriptor
-    h->arrays_fd = afd;  // Nodes file descriptor (arrays)
+    h->linked_list_fd = afd;  // Nodes file descriptor (linked_list)
     return 0;
 }
 
 void index_close(index_handle_t *h) {
     if (h == NULL) return;
     close(h->buckets_fd);
-    close(h->arrays_fd);
+    close(h->linked_list_fd);
     h->buckets_fd = -1;
-    h -> arrays_fd = -1;
+    h -> linked_list_fd = -1;
 }
 
 int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32_t *out_count) {
@@ -65,8 +65,8 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
     }
     size_t nkey_len = strlen(normalized_key);
     while (cur != 0) { // Recorre la lista enlazada
-        arrays_node_t node = {.key_len = 0, .key = NULL, .entry_offset = 0, .next_ptr = 0};
-        if (arrays_read_node_full(h->arrays_fd, cur, &node) != 0) { // Lee los datos del nodo
+        linked_list_node_t node = {.key_len = 0, .key = NULL, .entry_offset = 0, .next_ptr = 0};
+        if (linked_list_read_node(h->linked_list_fd, cur, &node) != 0) { // Lee los datos del nodo
             fprintf(stderr, "Error, no se pudo leer los datos del nodo\n");
             break;
         }
@@ -81,7 +81,7 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
                     uint32_t new_cap = cap * 2;
                     off_t *tmp = realloc(results, sizeof(off_t) * new_cap); // Copia del array con doble de tamaño
                     if (tmp == NULL) {
-                        arrays_free_node(&node);
+                        linked_list_free_node(&node);
                         free(results);
                         return -1;
                     }
@@ -94,7 +94,7 @@ int index_lookup(index_handle_t *h, const char *key, off_t **out_offsets, uint32
         }
 
         /* free node buffers */
-        arrays_free_node(&node);
+        linked_list_free_node(&node);
         cur = next;
     }
 

@@ -15,14 +15,14 @@
 
 // Definición de las rutas (ajusta si es necesario)
 const char *BUCKETS_PATH = "data/index/title_buckets.dat";
-const char *ARRAYS_PATH = "data/index/title_arrays.dat";
+const char *linked_list_PATH = "data/index/title_linked_list.dat";
 
 /**
  * @brief Maneja una única conexión de cliente.
  * * Lee una petición (protocolo: [uint32_t len][char* query]),
  * busca en el índice y envía una respuesta 
  * (protocolo: [int32_t count][off_t* results]).
- * * @param h Handle del índice (fd's de buckets y arrays)
+ * * @param h Handle del índice (fd's de buckets y linked_list)
  * @param client_fd File descriptor del socket del cliente
  */
 
@@ -206,11 +206,11 @@ int main(int argc, char *argv[]) {
 
     // --- Abrir el Índice ---
     index_handle_t index_h;
-    if (index_open(&index_h, BUCKETS_PATH, ARRAYS_PATH) != 0) {
+    if (index_open(&index_h, BUCKETS_PATH, linked_list_PATH) != 0) {
         fprintf(stderr, "Error: No se pudo abrir el índice. Para construir el indice use --build\n");
         return 1;
     }
-    printf("Índice cargado (FDs: b=%d, a=%d)\n", index_h.buckets_fd, index_h.arrays_fd);
+    printf("Índice cargado (FDs: b=%d, a=%d)\n", index_h.buckets_fd, index_h.linked_list_fd);
 
     FILE *csv_fp = fopen(CSV_PATH, "r"); // Dataset
     if (csv_fp == NULL) {

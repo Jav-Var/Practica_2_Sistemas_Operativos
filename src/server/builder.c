@@ -1,7 +1,7 @@
 #define _GNU_SOURCE
 #include "builder.h"
 #include "buckets.h"
-#include "arrays.h"
+#include "linked_list.h"
 #include "common.h"
 #include "hash.h"
 #include "util.h"
@@ -44,17 +44,17 @@ static char *csv_get_field_copy(const char *line, int field_idx) {
 int build_index_line(const char *csv_path, const char *line) {
 
     char buckets_path[1024] = "data/index/title_buckets.dat";
-    char arrays_path[1024] = "data/index/title_arrays.dat";
+    char linked_list_path[1024] = "data/index/title_linked_list.dat";
 
     int bfd = buckets_open_readwrite(buckets_path); // buckets file descriptor
     if (bfd < 0) {
         fprintf(stderr,"open buckets failed\n");
         return -1;
     } 
-    int afd = arrays_open(arrays_path); // nodes file descriptor
+    int afd = linked_list_open(linked_list_path); // nodes file descriptor
     if (afd < 0) { 
         close(bfd);
-        fprintf(stderr,"open arrays failed\n");
+        fprintf(stderr,"open linked_list failed\n");
         return -1;
     }
 
@@ -112,22 +112,22 @@ int build_index_line(const char *csv_path, const char *line) {
         off_t old_head = buckets_read_head(bfd, bucket);
 
         // Inserta los datos del nodo en el archivo
-        arrays_node_t node;
+        linked_list_node_t node;
         node.key_len = (uint16_t)strlen(normalized_title);
         node.key = strdup(normalized_title);
         node.entry_offset = start_offset;
         node.next_ptr = old_head;      
 
-        off_t new_node_off = arrays_append_node(afd, &node);
+        off_t new_node_off = linked_list_append_node(afd, &node);
         free(normalized_title);
 
         if (new_node_off == 0) {
             fprintf(stderr, "Error al insertar nodo\n");
-            arrays_free_node(&node);
+            linked_list_free_node(&node);
             return -1;
         }
         
-        arrays_free_node(&node);
+        linked_list_free_node(&node);
         
         if (buckets_write_head(bfd, bucket, new_node_off) != 0) {
             fprintf(stderr, "failed write bucket head\n");
@@ -142,7 +142,7 @@ int build_index_line(const char *csv_path, const char *line) {
 /* Construye los archivos de indices */
 int build_index_stream(const char *csv_path) {
     char buckets_path[1024] = "data/index/title_buckets.dat";
-    char arrays_path[1024] = "data/index/title_arrays.dat";
+    char linked_list_path[1024] = "data/index/title_linked_list.dat";
 
     // Verificar si se puede eliminar buckets_create y simplemente implementar aqui
     if (buckets_create(buckets_path) != 0) {
@@ -150,9 +150,9 @@ int build_index_stream(const char *csv_path) {
         return -1;
     }
 
-    // Verificar si se puede eliminar arrays_create y simplemente implementar aqui
-    if (arrays_create(arrays_path) != 0) {
-        fprintf(stderr, "Failed to create arrays file %s\n", arrays_path);
+    // Verificar si se puede eliminar linked_list_nodes_create y simplemente implementar aqui
+    if (linked_list_nodes_create(linked_list_path) != 0) {
+        fprintf(stderr, "Failed to create linked_list file %s\n", linked_list_path);
         return -1;
     }
 
@@ -161,10 +161,10 @@ int build_index_stream(const char *csv_path) {
         fprintf(stderr,"open buckets failed\n");
         return -1;
     } 
-    int afd = arrays_open(arrays_path); // nodes file descriptor
+    int afd = linked_list_open(linked_list_path); // nodes file descriptor
     if (afd < 0) { 
         close(bfd);
-        fprintf(stderr,"open arrays failed\n");
+        fprintf(stderr,"open linked_list failed\n");
         return -1;
     }
 
@@ -225,21 +225,21 @@ int build_index_stream(const char *csv_path) {
         off_t old_head = buckets_read_head(bfd, bucket);
 
         // Inserta los datos del nodo en el archivo
-        arrays_node_t node;
+        linked_list_node_t node;
         node.key_len = (uint16_t)strlen(normalized_title);
         node.key = strdup(normalized_title);
         node.entry_offset = start_offset;
         node.next_ptr = old_head;      
-        off_t new_node_off = arrays_append_node(afd, &node);
+        off_t new_node_off = linked_list_append_node(afd, &node);
         free(normalized_title);
 
         if (new_node_off == 0) {
             fprintf(stderr, "Error al insertar nodo\n");
-            arrays_free_node(&node);
+            linked_list_free_node(&node);
             continue;
         }
         
-        arrays_free_node(&node);
+        linked_list_free_node(&node);
         
         if (buckets_write_head(bfd, bucket, new_node_off) != 0) {
             fprintf(stderr, "failed write bucket head\n");
